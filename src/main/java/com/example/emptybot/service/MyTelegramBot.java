@@ -10,7 +10,6 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
@@ -90,7 +89,7 @@ public class MyTelegramBot extends AbilityBot {
     public Reply handleMessages() {
         return Reply.of((bot, update) -> silent.send("Вы написали " + update.getMessage().getText(), update.getMessage().getChatId()),
                 Flag.TEXT,
-                update -> !update.getMessage().getText().startsWith("/start"));
+                update -> !update.getMessage().getText().startsWith("/"));
     }
 
 
@@ -100,7 +99,6 @@ public class MyTelegramBot extends AbilityBot {
     }
 
     private ReplyKeyboardMarkup replyKeyboard() {
-        // две строки с кнопками
         KeyboardRow row1 = new KeyboardRow(List.of(
                 KeyboardButton.builder().text("Помощь").build(),
                 KeyboardButton.builder().text("О боте").build()
@@ -111,7 +109,7 @@ public class MyTelegramBot extends AbilityBot {
         return ReplyKeyboardMarkup.builder()
                 .keyboard(List.of(row1, row2))
                 .resizeKeyboard(true)
-                .oneTimeKeyboard(false)
+                .oneTimeKeyboard(true)
                 .build();
     }
 
