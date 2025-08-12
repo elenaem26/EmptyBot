@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <logging>WARN</logging>
+
+  <jdbc>
+    <driver>org.postgresql.Driver</driver>
+    <url>jdbc:postgresql://localhost:5432/postgres</url>
+    <user>bot</user>
+    <password></password>
+  </jdbc>
+
+  <generator>
+    <name>org.jooq.codegen.DefaultGenerator</name>
+
+    <database>
+      <name>org.jooq.meta.postgres.PostgresDatabase</name>
+      <inputSchema>public</inputSchema>
+      <includes>.*</includes>
+      <excludes>flyway_schema_history</excludes>
+    </database>
+
+    <target>
+      <packageName>com.example.jooq</packageName>
+      <directory>build/generated-src/jooq</directory>
+    </target>
+  </generator>
+</configuration>
