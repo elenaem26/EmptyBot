@@ -4,24 +4,17 @@
 
   <jdbc>
     <driver>org.postgresql.Driver</driver>
-    <url>jdbc:postgresql://localhost:5432/postgres</url>
-    <user>bot</user>
-    <password></password>
   </jdbc>
-
   <generator>
-    <name>org.jooq.codegen.DefaultGenerator</name>
-
+    <name>org.jooq.codegen.KotlinGenerator</name>
     <database>
       <name>org.jooq.meta.postgres.PostgresDatabase</name>
       <inputSchema>public</inputSchema>
-      <includes>.*</includes>
       <excludes>flyway_schema_history</excludes>
     </database>
-
     <target>
-      <packageName>com.example.jooq</packageName>
-      <directory>build/generated-src/jooq</directory>
+      <packageName>com.example.jooq.generated</packageName>
+      <directory>build/generated-src/jooq/main</directory>
     </target>
   </generator>
 </configuration>
