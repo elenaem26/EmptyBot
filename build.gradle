@@ -1,15 +1,7 @@
-buildscript {
-    dependencies {
-        classpath("org.postgresql:postgresql:42.7.4")
-        classpath("org.flywaydb:flyway-database-postgresql:11.11.0")
-    }
-}
-
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.4'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.flywaydb.flyway' version '11.11.0'
 }
 
 group = 'com.example'
@@ -29,19 +21,19 @@ configurations {
     jooqCodegen
 }
 
-ext.flywayVer = '11.11.0'
 ext.postgresVer = '42.7.4'
+ext.jooqVer = '3.19.24'
 
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-jooq'
 
-    implementation "org.flywaydb:flyway-core:${flywayVer}"
-    implementation "org.flywaydb:flyway-database-postgresql:${flywayVer}"
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
 
-    jooqCodegen 'org.jooq:jooq-codegen'
-    jooqCodegen "org.postgresql:postgresql:${postgresVer}"
+    jooqCodegen "org.jooq:jooq-codegen:${jooqVer}"
+    jooqCodegen "org.jooq:jooq-meta-extensions:${jooqVer}"
 
     implementation("org.telegram:telegrambots-spring-boot-starter:6.9.7.0")
     implementation("org.telegram:telegrambots-abilities:6.9.7.0")
@@ -53,59 +45,22 @@ dependencies {
     testRuntimeOnly 'org.postgresql:postgresql:42.7.4'
 }
 
-sourceSets {
-    main {
-        java {
-            srcDir 'build/generated-src/jooq'
-        }
-    }
-}
-
-def p = providers
-def dbUrl  = p.gradleProperty('db.url').orElse(p.environmentVariable('DB_URL')).orElse('jdbc:postgresql://localhost:5432/postgres').get()
-def dbUser = p.gradleProperty('db.user').orElse(p.environmentVariable('DB_USER')).orElse('bot').get()
-def dbPass = p.gradleProperty('db.pass').orElse(p.environmentVariable('DB_PASS')).orElse('').get()
-
-flyway {
-    url = dbUrl
-    user = dbUser
-    password = dbPass
-    locations = ['classpath:db/migration']
-}
-tasks.named('flywayMigrate') {
-    dependsOn tasks.named('processResources')
-}
-tasks.named('flywayInfo') {
-    dependsOn tasks.named('processResources')
-}
-
-
 tasks.register('generateJooq', JavaExec) {
     group = 'jOOQ'
-    description = 'Generates jOOQ sources from the database schema'
+    description = 'Generate jOOQ from migrations via DDLDatabase'
     classpath = configurations.jooqCodegen
     mainClass = 'org.jooq.codegen.GenerationTool'
     args file('src/main/resources/jooq-config.xml')
 
-    dependsOn tasks.named('flywayMigrate')
-
-    systemProperty 'jooq.codegen.jdbc.url', dbUrl
-    systemProperty 'jooq.codegen.jdbc.user', dbUser
-    systemProperty 'jooq.codegen.jdbc.password', dbPass
-
-    inputs.files(fileTree('src/main/resources/db/migration'))
-            .withPropertyName('migrations')
-            .withPathSensitivity(PathSensitivity.RELATIVE)
-
-    outputs.dir('build/generated-src/jooq')
+    inputs.files fileTree('src/main/resources/db/migration'), file('src/main/resources/jooq-config.xml')
+    outputs.dir 'build/generated-src/jooq'
 
     // чтобы секреты не улетели в build cache
     outputs.cacheIf { false }
 }
 
-tasks.named('compileJava') {
-    dependsOn tasks.named('generateJooq')
-}
+sourceSets.main.java.srcDir 'build/generated-src/jooq'
+tasks.named('compileJava') { dependsOn tasks.named('generateJooq') }
 
 
 tasks.named('test') {

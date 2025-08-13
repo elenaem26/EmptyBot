@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-  <logging>WARN</logging>
-
-  <jdbc>
-    <driver>org.postgresql.Driver</driver>
-  </jdbc>
+<configuration xmlns="http://www.jooq.org/xsd/jooq-codegen-3.20.0.xsd">
   <generator>
-    <name>org.jooq.codegen.DefaultGenerator</name>
+    <name>org.jooq.codegen.JavaGenerator</name> <!-- или JavaGenerator -->
     <database>
-      <name>org.jooq.meta.postgres.PostgresDatabase</name>
-      <inputSchema>public</inputSchema>
-      <excludes>flyway_schema_history</excludes>
+      <name>org.jooq.meta.extensions.ddl.DDLDatabase</name>
+      <properties>
+        <!-- где лежат миграции Flyway -->
+        <property key="scripts" value="src/main/resources/db/migration"/>
+        <!-- сортировка файлов по версии V1__.., V2__.. -->
+        <property key="sort" value="semantic"/>
+        <!-- подсказываем диалект -->
+        <property key="sqlDialect" value="POSTGRES"/>
+      </properties>
     </database>
     <target>
       <packageName>com.example.jooq.generated</packageName>
