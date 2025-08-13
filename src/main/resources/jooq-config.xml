@@ -6,7 +6,7 @@
     <driver>org.postgresql.Driver</driver>
   </jdbc>
   <generator>
-    <name>org.jooq.codegen.KotlinGenerator</name>
+    <name>org.jooq.codegen.DefaultGenerator</name>
     <database>
       <name>org.jooq.meta.postgres.PostgresDatabase</name>
       <inputSchema>public</inputSchema>

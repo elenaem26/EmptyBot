@@ -4,11 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.telegram.abilitybots.api.bot.AbilityBot;
+import org.telegram.abilitybots.api.bot.BaseAbilityBot;
 import org.telegram.abilitybots.api.objects.*;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -22,6 +24,8 @@ import java.util.List;
 public class MyTelegramBot extends AbilityBot {
 
     @Autowired
+    private CompanyService companyService;
+
     public MyTelegramBot(Environment env) {
         super(env.getProperty("bottoken"), env.getProperty("botname"));
     }
@@ -87,9 +91,30 @@ public class MyTelegramBot extends AbilityBot {
     }
 
     public Reply handleMessages() {
-        return Reply.of((bot, update) -> silent.send("Вы написали " + update.getMessage().getText(), update.getMessage().getChatId()),
+        return Reply.of(this::reply,
                 Flag.TEXT,
                 update -> !update.getMessage().getText().startsWith("/"));
+    }
+
+    private void reply(BaseAbilityBot bot, Update update) {
+        String text = update.getMessage().getText();
+        Long chatId = update.getMessage().getChatId();
+
+        if (text.toLowerCase().startsWith("save")) {
+            String company = getCompanyName(text, "save");
+            companyService.saveCompany(company);
+            silent.send("Компания " + company + " сохранена", chatId);
+        } else if (text.toLowerCase().startsWith("delete")) {
+            String company = getCompanyName(text, "delete");
+            companyService.deleteCompany(company);
+            silent.send("Компания " + company + " удалена", chatId);
+        } else {
+            silent.send("Команда " + text + " не распознана", chatId);
+        }
+    }
+
+    private String getCompanyName(String text, String command) {
+        return text.trim().substring(command.length()).trim();
     }
 
 
