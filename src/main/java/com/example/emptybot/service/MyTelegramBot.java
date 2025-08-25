@@ -1,15 +1,25 @@
 package com.example.emptybot.service;
 
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.telegram.abilitybots.api.bot.AbilityBot;
 import org.telegram.abilitybots.api.bot.BaseAbilityBot;
 import org.telegram.abilitybots.api.objects.*;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -17,7 +27,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -25,6 +37,9 @@ public class MyTelegramBot extends AbilityBot {
 
     @Autowired
     private CompanyService companyService;
+
+    @Autowired
+    private ChatClient chatClient;
 
     public MyTelegramBot(Environment env) {
         super(env.getProperty("bottoken"), env.getProperty("botname"));
@@ -66,6 +81,82 @@ public class MyTelegramBot extends AbilityBot {
                 .build();
     }
 
+//    public Ability ai() {
+//        return Ability
+//                .builder()
+//                .name("ai")
+//                .info("Отправить текст в OpenAI")
+//                .locality(org.telegram.abilitybots.api.objects.Locality.ALL)
+//                .privacy(org.telegram.abilitybots.api.objects.Privacy.PUBLIC)
+//                .action(this::handleAiCommand)
+//                .build();
+//    }
+//
+//    private void handleAiCommand(MessageContext ctx) {
+//        String prompt = String.join(" ", ctx.arguments());
+//        String response = chatClient.prompt()
+//                .user(prompt)
+//                .call()
+//                .content();
+//        silent.send(response, ctx.chatId());
+//    }
+//
+    public void handleAiPhoto(BaseAbilityBot bot, Update update) {
+        Long chatId = update.getMessage().getChatId();
+        try {
+            // 1) извлечь fileId (photo или document с image/*)
+            String fileId = null;
+            MimeType mime = null;
+
+            if (update.getMessage() != null && update.getMessage().hasPhoto()) {
+                List<PhotoSize> photos = update.getMessage().getPhoto();
+                PhotoSize best = photos.stream()
+                        .max(Comparator.comparingInt(p -> p.getWidth() * p.getHeight()))
+                        .orElseThrow();
+                fileId = best.getFileId();
+                mime = MimeTypeUtils.IMAGE_JPEG; // телега фотки обычно в jpeg
+            } else if (update.getMessage() != null && update.getMessage().hasDocument()
+                    && update.getMessage().getDocument().getMimeType() != null
+                    && update.getMessage().getDocument().getMimeType().startsWith("image/")) {
+                fileId = update.getMessage().getDocument().getFileId();
+                mime = MimeType.valueOf(update.getMessage().getDocument().getMimeType());
+            } else {
+                silent.send("Пришли картинку (photo/document).", chatId);
+                return;
+            }
+
+            // 2) получить FilePath и скачать файл
+            var tgFile = execute(new GetFile(fileId));                 // API getFile
+            var localFile = downloadFile(tgFile);                       // скачивает во временный файл
+            byte[] bytes = Files.readAllBytes(localFile.toPath());
+            ByteArrayResource resource = new ByteArrayResource(bytes) {
+                @Override
+                public String getFilename() {
+                    return "image.jpg"; // OpenAI требует имя файла
+                }
+            };
+
+            // 3) вызвать OpenAI (vision) через Spring AI
+            var user = UserMessage.builder()
+                    .text("Extract line items from this receipt text. Keep original Georgian name in `name_ka`. Provide optional `name_ru` if confident.")
+                    .media(new Media(mime, resource))
+                    .build();
+
+            String answer = chatClient
+                    .prompt(new Prompt(user))
+                    .options(OpenAiChatOptions.builder()
+                            .build())
+                    .call()
+                    .content();
+
+            // 4) ответ в чат
+            silent.send(answer, chatId);
+
+        } catch (Exception e) {
+            silent.send("Не удалось обработать изображение: " + e.getMessage(), chatId);
+        }
+    }
+
 
     public Reply handleCallbacks() {
         return Reply.of((bot, update) -> {
@@ -96,6 +187,11 @@ public class MyTelegramBot extends AbilityBot {
                 update -> !update.getMessage().getText().startsWith("/"));
     }
 
+    public Reply handlePhotos() {
+        return Reply.of(this::handleAiPhoto,
+                Flag.PHOTO);
+    }
+
     private void reply(BaseAbilityBot bot, Update update) {
         String text = update.getMessage().getText();
         Long chatId = update.getMessage().getChatId();
@@ -113,6 +209,11 @@ public class MyTelegramBot extends AbilityBot {
         }
     }
 
+    private void replyPhoto(BaseAbilityBot bot, Update update) {
+        Long chatId = update.getMessage().getChatId();
+        silent.send("фото", chatId);
+    }
+
     private String getCompanyName(String text, String command) {
         return text.trim().substring(command.length()).trim();
     }
@@ -120,7 +221,7 @@ public class MyTelegramBot extends AbilityBot {
 
     @Override
     public List<Reply> replies() {
-        return List.of(handleMessages(), handleCallbacks());
+        return List.of(handlePhotos(), handleMessages(), handleCallbacks());
     }
 
     private ReplyKeyboardMarkup replyKeyboard() {

@@ -11,6 +11,15 @@ spring:
       connection-timeout: 30000
   jooq:
     sql-dialect: POSTGRES
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+  main:
+    web-application-type: none
+
 
   flyway:
     enabled: true
