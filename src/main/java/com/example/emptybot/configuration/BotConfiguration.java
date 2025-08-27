@@ -35,7 +35,7 @@ public class BotConfiguration {
     public ChatClient chatClient(ChatClient.Builder builder) {
         try (var in = promptResource.getInputStream()) {
             return builder
-                    .defaultOptions(ChatOptions.builder().model("gpt-4o-mini").temperature(0.0).build())
+                    .defaultOptions(ChatOptions.builder().model("gpt-4o-mini").temperature(0.1).build())
                     .defaultSystem(new String(in.readAllBytes(), StandardCharsets.UTF_8))
                     .build();
         } catch (IOException e) {

@@ -15,12 +15,9 @@ import java.util.Base64;
 @Configuration
 public class VisionConfig {
 
-    private final Logger logger = LoggerFactory.getLogger(VisionConfig.class);
-
     @Bean
     public ImageAnnotatorClient imageAnnotatorClient() throws Exception {
         String b64 = System.getenv("GCV_KEY");
-        logger.info("GCV_KEY: {}", b64 == null ? "null" : "not null");
 
         ImageAnnotatorSettings.Builder builder = ImageAnnotatorSettings.newBuilder();
 
