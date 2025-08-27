@@ -18,7 +18,7 @@ public class OcrService {
 
         var ctx = ImageContext.newBuilder()
                 .addLanguageHints("ka") // грузинский
-               // .addLanguageHints("en") // часто встречается вместе
+                .addLanguageHints("en") // часто встречается вместе
                 .build();
 
         var feature = Feature.newBuilder()

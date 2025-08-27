@@ -115,35 +115,40 @@ public class MyTelegramBot extends AbilityBot {
             byte[] bytes = Files.readAllBytes(localFile.toPath());
 
             String answer = ocrService.ocrBytes(bytes);
+            String response = chatClient.prompt()
+                    .user("Here is OCR text from a receipt: \n" + answer)
+                    .call()
+                    .content();
 
             // 4) ответ в чат
             silent.send(answer, chatId);
+            silent.send(response, chatId);
 
         } catch (Exception e) {
             silent.send("Не удалось обработать изображение: " + e.getMessage(), chatId);
         }
     }
 
-    //    public Ability ai() {
-//        return Ability
-//                .builder()
-//                .name("ai")
-//                .info("Отправить текст в OpenAI")
-//                .locality(org.telegram.abilitybots.api.objects.Locality.ALL)
-//                .privacy(org.telegram.abilitybots.api.objects.Privacy.PUBLIC)
-//                .action(this::handleAiCommand)
-//                .build();
-//    }
-//
-//    private void handleAiCommand(MessageContext ctx) {
-//        String prompt = String.join(" ", ctx.arguments());
-//        String response = chatClient.prompt()
-//                .user(prompt)
-//                .call()
-//                .content();
-//        silent.send(response, ctx.chatId());
-//    }
-//
+    public Ability ai() {
+        return Ability
+                .builder()
+                .name("ai")
+                .info("Отправить текст в OpenAI")
+                .locality(org.telegram.abilitybots.api.objects.Locality.ALL)
+                .privacy(org.telegram.abilitybots.api.objects.Privacy.PUBLIC)
+                .action(this::handleAiCommand)
+                .build();
+    }
+
+    private void handleAiCommand(MessageContext ctx) {
+        String prompt = String.join(" ", ctx.arguments());
+        String response = chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
+        silent.send(response, ctx.chatId());
+    }
+
 
     public Reply handleCallbacks() {
         return Reply.of((bot, update) -> {
