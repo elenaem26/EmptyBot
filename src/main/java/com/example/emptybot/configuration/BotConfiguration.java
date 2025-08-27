@@ -12,13 +12,13 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class BotConfiguration {
 
-    @Value("${ocr.systemPrompt}")
-    private Resource systemPrompt;
+    @Value("classpath:prompts/SystemPrompt.txt")
+    private Resource promptResource;
 
     @Bean
     public TelegramBotsApi init (MyTelegramBot myTelegramBot) {
@@ -33,13 +33,13 @@ public class BotConfiguration {
 
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder) {
-        try {
+        try (var in = promptResource.getInputStream()) {
             return builder
                     .defaultOptions(ChatOptions.builder().model("gpt-4o-mini").temperature(0.0).build())
-                    .defaultSystem(Files.readString(systemPrompt.getFile().toPath()))
+                    .defaultSystem(new String(in.readAllBytes(), StandardCharsets.UTF_8))
                     .build();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Cannot read SystemPrompt.txt", e);
         }
     }
 }
