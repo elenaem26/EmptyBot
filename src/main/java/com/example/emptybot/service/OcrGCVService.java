@@ -6,12 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OcrService {
+public class OcrGCVService {
 
     @Autowired
     private ImageAnnotatorClient client;
 
-    public String ocrBytes(byte[] bytes) throws Exception {
+    public String read(byte[] bytes) throws Exception {
         var img = Image.newBuilder()
                 .setContent(com.google.protobuf.ByteString.copyFrom(bytes))
                 .build();

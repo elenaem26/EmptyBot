@@ -1,18 +1,11 @@
 package com.example.emptybot.service;
 
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.content.Media;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
 import org.telegram.abilitybots.api.bot.AbilityBot;
 import org.telegram.abilitybots.api.bot.BaseAbilityBot;
 import org.telegram.abilitybots.api.objects.*;
@@ -41,7 +34,10 @@ public class MyTelegramBot extends AbilityBot {
     private CompanyService companyService;
 
     @Autowired
-    private OcrService ocrService;
+    private OcrGCVService ocrGCVService;
+
+    @Autowired
+    private OcrTesseractService ocrTesseractService;
 
     @Autowired
     private ChatClient chatClient;
@@ -114,16 +110,24 @@ public class MyTelegramBot extends AbilityBot {
             var localFile = downloadFile(tgFile);                       // скачивает во временный файл
             byte[] bytes = Files.readAllBytes(localFile.toPath());
 
-            String answer = ocrService.ocrBytes(bytes);
+            String answerGCV = ocrGCVService.read(bytes);
+            String answerTesseract = ocrTesseractService.read(bytes);
+            String userPrompt = """
+                    google cloud vision:
+                    %s
+                    
+                    tesseract:
+                    %s
+                    """.formatted(answerGCV, answerTesseract);
+
             String response = chatClient.prompt()
-                    .user("Here is OCR text from a receipt: \n" + answer)
+                    .user(userPrompt)
                     .call()
                     .content();
 
-            // 4) ответ в чат
-            silent.send(answer, chatId);
+            silent.send("GCV: \n" + answerGCV, chatId);
+            silent.send("tesseract: \n" + answerTesseract, chatId);
             silent.send(response, chatId);
-
         } catch (Exception e) {
             silent.send("Не удалось обработать изображение: " + e.getMessage(), chatId);
         }
