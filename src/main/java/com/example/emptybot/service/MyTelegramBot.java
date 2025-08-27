@@ -1,5 +1,13 @@
 package com.example.emptybot.service;
 
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -34,6 +42,9 @@ public class MyTelegramBot extends AbilityBot {
 
     @Autowired
     private OcrService ocrService;
+
+    @Autowired
+    private ChatClient chatClient;
 
     public MyTelegramBot(Environment env) {
         super(env.getProperty("bottoken"), env.getProperty("botname"));
@@ -113,6 +124,27 @@ public class MyTelegramBot extends AbilityBot {
         }
     }
 
+    //    public Ability ai() {
+//        return Ability
+//                .builder()
+//                .name("ai")
+//                .info("Отправить текст в OpenAI")
+//                .locality(org.telegram.abilitybots.api.objects.Locality.ALL)
+//                .privacy(org.telegram.abilitybots.api.objects.Privacy.PUBLIC)
+//                .action(this::handleAiCommand)
+//                .build();
+//    }
+//
+//    private void handleAiCommand(MessageContext ctx) {
+//        String prompt = String.join(" ", ctx.arguments());
+//        String response = chatClient.prompt()
+//                .user(prompt)
+//                .call()
+//                .content();
+//        silent.send(response, ctx.chatId());
+//    }
+//
+
     public Reply handleCallbacks() {
         return Reply.of((bot, update) -> {
             CallbackQuery cq = update.getCallbackQuery();
@@ -162,6 +194,11 @@ public class MyTelegramBot extends AbilityBot {
         } else {
             silent.send("Команда " + text + " не распознана", chatId);
         }
+    }
+
+    private void replyPhoto(BaseAbilityBot bot, Update update) {
+        Long chatId = update.getMessage().getChatId();
+        silent.send("фото", chatId);
     }
 
     private String getCompanyName(String text, String command) {
