@@ -126,7 +126,7 @@ public class MyTelegramBot extends AbilityBot {
                     .content();
 
             silent.send("GCV: \n" + answerGCV, chatId);
-            silent.send("tesseract: \n" + answerTesseract, chatId);
+            silent.send("Tesseract: \n" + answerTesseract, chatId);
             silent.send(response, chatId);
         } catch (Exception e) {
             silent.send("Не удалось обработать изображение: " + e.getMessage(), chatId);

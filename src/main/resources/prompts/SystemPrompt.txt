@@ -45,3 +45,9 @@ TRANSLATION:
 - If both Georgian and English names appear, fill both.
 - If only Georgian is present and you are confident → translate to English.
 - If only English is present → set name_ka="unknown".
+
+SUM RULES:
+- You must NOT compute or infer the total.
+- Extract the total only if it is explicitly present in the OCR text.
+- Use exactly the number printed on the total line.
+- If there is no explicit total line, output "sum": null.
