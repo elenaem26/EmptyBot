@@ -41,6 +41,17 @@ B) For user free-form input (<user_message>):
      - If a confident match exists → set item.category_id.
      - If no good match exists → set item.category_suggest (string).
      - If unsure, always return at least category_suggest.
+5) Currency rule (normalization to ISO-4217):
+     - The input currency may appear as words or symbols (e.g., “dollars”, “доллар”, “lari”, “ლარი”, “$”, “₾”, “GEL”).
+     - Always return a 3-letter ISO-4217 code in UPPERCASE in the currency field; the price must be numbers only (no symbols).
+     - Map common forms to codes, e.g.:
+        $, dollar(s), usd → USD
+        €, euro, eur → EUR
+        ₾, lari, ლარი, gel → GEL
+        ₽, rub, руб, ruble(s) → RUB
+        £, pound(s), gbp → GBP
+        If multiple currencies are mentioned, use the one closest to the parsed price; if still ambiguous, return null.
+        If the currency is unspecified or unrecognized, return null (do not guess).
 
 OUTPUT RULES (very important):
 - For OCR input → return STRICTLY valid JSON, no extra text.

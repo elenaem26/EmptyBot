@@ -2,14 +2,15 @@ package com.example.emptybot.service;
 
 import com.example.emptybot.dto.ReceiptDto;
 import com.example.jooq.generated.tables.records.CategoriesRecord;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
 import org.telegram.abilitybots.api.bot.AbilityBot;
 import org.telegram.abilitybots.api.bot.BaseAbilityBot;
 import org.telegram.abilitybots.api.objects.*;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class MyTelegramBot extends AbilityBot {
+
+    private final Logger logger = LoggerFactory.getLogger(MyTelegramBot.class);
 
     @Autowired
     private CategoryService categoryService;
@@ -206,13 +209,14 @@ public class MyTelegramBot extends AbilityBot {
                 .user(buildUserPrompt(text, categories))
                 .call()
                 .content();
+        silent.send(answer, chatId);
         if (answer != null && !answer.isBlank()) {
             try {
                 ReceiptDto dto = mapper.readValue(answer, ReceiptDto.class);
                 purchasesService.create(dto);
-                silent.send(answer, chatId);
                 silent.send("created", chatId);
-            } catch (JsonProcessingException e) {
+            } catch (Exception e) {
+                logger.error("Error", e);
                 throw new RuntimeException(e);
             }
         } else {
