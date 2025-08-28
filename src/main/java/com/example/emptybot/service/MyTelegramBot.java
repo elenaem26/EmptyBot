@@ -1,5 +1,9 @@
 package com.example.emptybot.service;
 
+import com.example.emptybot.dto.ReceiptDto;
+import com.example.jooq.generated.tables.records.CategoriesRecord;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.ai.chat.client.ChatClient;
@@ -23,15 +27,17 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class MyTelegramBot extends AbilityBot {
 
     @Autowired
-    private CompanyService companyService;
+    private CategoryService categoryService;
+
+    @Autowired
+    private PurchasesService purchasesService;
 
     @Autowired
     private OcrGCVService ocrGCVService;
@@ -41,6 +47,8 @@ public class MyTelegramBot extends AbilityBot {
 
     @Autowired
     private ChatClient chatClient;
+
+    private ObjectMapper mapper = new ObjectMapper();
 
     public MyTelegramBot(Environment env) {
         super(env.getProperty("bottoken"), env.getProperty("botname"));
@@ -81,6 +89,7 @@ public class MyTelegramBot extends AbilityBot {
                 })
                 .build();
     }
+
     public void handleAiPhoto(BaseAbilityBot bot, Update update) {
         Long chatId = update.getMessage().getChatId();
         try {
@@ -191,18 +200,38 @@ public class MyTelegramBot extends AbilityBot {
     private void reply(BaseAbilityBot bot, Update update) {
         String text = update.getMessage().getText();
         Long chatId = update.getMessage().getChatId();
-
-        if (text.toLowerCase().startsWith("save")) {
-            String company = getCompanyName(text, "save");
-            companyService.saveCompany(company);
-            silent.send("Компания " + company + " сохранена", chatId);
-        } else if (text.toLowerCase().startsWith("delete")) {
-            String company = getCompanyName(text, "delete");
-            companyService.deleteCompany(company);
-            silent.send("Компания " + company + " удалена", chatId);
+        Map<UUID, String> categories = categoryService.find().stream().
+                collect(Collectors.toMap(CategoriesRecord::getId, CategoriesRecord::getName));
+        String answer = chatClient.prompt()
+                .user(buildUserPrompt(text, categories))
+                .call()
+                .content();
+        if (answer != null && !answer.isBlank()) {
+            try {
+                ReceiptDto dto = mapper.readValue(answer, ReceiptDto.class);
+                purchasesService.create(dto);
+                silent.send(answer, chatId);
+                silent.send("created", chatId);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         } else {
-            silent.send("Команда " + text + " не распознана", chatId);
+            silent.send("Ничего не понятно =(", chatId);
         }
+    }
+
+    public static String buildUserPrompt(String message, Map<UUID, String> categories) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<user_message>\n")
+                .append(message)
+                .append("\n</user_message>\n\n");
+
+        sb.append("Available categories:\n");
+        for (Map.Entry<UUID, String> categoryEntry : categories.entrySet()) {
+            sb.append("- ").append(categoryEntry.getKey()).append(":").append(categoryEntry.getValue()).append("\n");
+        }
+
+        return sb.toString();
     }
 
     private void replyPhoto(BaseAbilityBot bot, Update update) {

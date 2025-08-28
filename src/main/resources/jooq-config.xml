@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration xmlns="http://www.jooq.org/xsd/jooq-codegen-3.20.0.xsd">
-  <generator>
-    <name>org.jooq.codegen.JavaGenerator</name> <!-- или JavaGenerator -->
-    <database>
-      <name>org.jooq.meta.extensions.ddl.DDLDatabase</name>
-      <properties>
-        <!-- где лежат миграции Flyway -->
-        <property key="scripts" value="src/main/resources/db/migration"/>
-        <!-- сортировка файлов по версии V1__.., V2__.. -->
-        <property key="sort" value="semantic"/>
-        <!-- подсказываем диалект -->
-        <property key="sqlDialect" value="POSTGRES"/>
-      </properties>
-    </database>
-    <target>
-      <packageName>com.example.jooq.generated</packageName>
-      <directory>build/generated-src/jooq/main</directory>
-    </target>
-  </generator>
+    <generator>
+        <name>org.jooq.codegen.JavaGenerator</name> <!-- или JavaGenerator -->
+        <database>
+            <name>org.jooq.meta.extensions.ddl.DDLDatabase</name>
+            <properties>
+                <property key="scripts" value="src/main/resources/db/migration"/>
+                <property key="sort" value="semantic"/>
+                <property key="sqlDialect" value="POSTGRES"/>
+            </properties>
+            <forcedTypes>
+                <forcedType>
+                    <name>INSTANT</name>
+                    <types>^TIMESTAMP.*$</types>
+                </forcedType>
+            </forcedTypes>
+        </database>
+        <target>
+            <packageName>com.example.jooq.generated</packageName>
+            <directory>build/generated-src/jooq/main</directory>
+        </target>
+    </generator>
 </configuration>
