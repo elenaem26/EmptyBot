@@ -26,8 +26,6 @@ spring:
     locations: classpath:db/migration
     clean-disabled: true
 
-ocr:
-  tessdataPath: ${TESSDATA_PATH:/usr/local/share/tessdata}
-  lang: kat+eng
-  psm: 6
-  systemPrompt: classpath:prompts/SystemPrompt.txt
+telegrambot:
+  name: ${TELEGRAM_BOT_NAME}
+  token: ${TELEGRAM_BOT_TOKEN}

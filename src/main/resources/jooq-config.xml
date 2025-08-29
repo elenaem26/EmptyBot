@@ -17,8 +17,8 @@
             </forcedTypes>
         </database>
         <target>
-            <packageName>com.example.jooq.generated</packageName>
-            <directory>build/generated-src/jooq/main</directory>
+            <packageName>expenses.jooq.generated</packageName>
+            <directory>build/generated-src/jooq</directory>
         </target>
     </generator>
 </configuration>

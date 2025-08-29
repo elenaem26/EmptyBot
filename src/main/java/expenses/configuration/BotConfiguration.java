@@ -1,6 +1,6 @@
-package com.example.emptybot.configuration;
+package expenses.configuration;
 
-import com.example.emptybot.service.MyTelegramBot;
+import expenses.bot.ExpensesBot;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,10 +21,10 @@ public class BotConfiguration {
     private Resource promptResource;
 
     @Bean
-    public TelegramBotsApi init (MyTelegramBot myTelegramBot) {
+    public TelegramBotsApi init (ExpensesBot expensesBot) {
         try {
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-            telegramBotsApi.registerBot(myTelegramBot);
+            telegramBotsApi.registerBot(expensesBot);
             return telegramBotsApi;
         } catch (TelegramApiException ex) {
             throw new RuntimeException("Error registering bot: ${e.message}", ex);
@@ -35,7 +35,7 @@ public class BotConfiguration {
     public ChatClient chatClient(ChatClient.Builder builder) {
         try (var in = promptResource.getInputStream()) {
             return builder
-                    .defaultOptions(ChatOptions.builder().model("gpt-4o-mini").temperature(0.1).build())
+                    .defaultOptions(ChatOptions.builder().model("gpt-4o-mini").build())
                     .defaultSystem(new String(in.readAllBytes(), StandardCharsets.UTF_8))
                     .build();
         } catch (IOException e) {

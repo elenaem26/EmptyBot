@@ -1,4 +1,4 @@
-package com.example.emptybot.configuration;
+package expenses.configuration;
 
 import org.jooq.conf.RenderNameCase;
 import org.jooq.conf.RenderQuotedNames;
