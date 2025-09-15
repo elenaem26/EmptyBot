@@ -25,6 +25,8 @@ public class ExpensesService {
     @Autowired
     private CategoryService categoryService;
 
+    private static final String DEFAULT_CURRENCY = "GEL";
+
     public ExpensesAndCategoriesRecord createExpensesAndCategories(OpenAiExpensesResponseDto expensesDto) {
         Set<String> categories = expensesDto.expenses().stream().map(OpenAiExpenseDto::category).collect(Collectors.toSet());
         List<CategoriesRecord> categoriesSaved = categoryService.createCategoriesIfNotExists(categories);
@@ -41,16 +43,24 @@ public class ExpensesService {
         return new ExpensesAndCategoriesRecord(expensesToSave, categoriesSaved);
     }
 
+    public ExpensesRecord createExpensesAndCategories(OpenAiExpenseDto expenseDto, CategoriesRecord category) {
+        var expense = mapExpense(expenseDto, category.getId());
+        dsl.executeInsert(expense);
+        return expense;
+    }
+
     private ExpensesRecord mapExpense(OpenAiExpenseDto dto, UUID categoryId) {
         UUID id = UUID.randomUUID();
         ExpensesRecord r = dsl.newRecord(EXPENSES);
         r.setId(id);
         r.setName(dto.name());
-        r.setDescription(dto.description());
         r.setPrice(dto.price());
-        r.setAmount(dto.amount());
-        r.setCurrency(dto.currency());
         r.setCategoryId(categoryId);
+        if (dto.currency() == null || dto.currency().isBlank()) {
+            r.setCurrency(DEFAULT_CURRENCY);
+        } else {
+            r.setCurrency(dto.currency());
+        }
         return r;
     }
 

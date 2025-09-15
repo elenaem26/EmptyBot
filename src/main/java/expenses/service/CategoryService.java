@@ -34,6 +34,12 @@ public class CategoryService {
         return categoriesByName.values().stream().toList();
     }
 
+    public CategoriesRecord createCategory(String name) {
+        CategoriesRecord newCategory = mapCategory(name);
+        newCategory.store();
+        return newCategory;
+    }
+
     public CategoriesRecord mapCategory(String name) {
         UUID id = UUID.randomUUID();
         CategoriesRecord r = dsl.newRecord(CATEGORIES);

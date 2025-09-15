@@ -1,9 +1,9 @@
 package expenses.dto;
 
-import java.util.List;
+import java.util.Collection;
 
 public record OpenAiRequestDto(
         String userMessage,
-        List<String> categories
+        Collection<String> categories
 ) {
 }
