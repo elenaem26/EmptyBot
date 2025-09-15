@@ -76,7 +76,7 @@ public class ExpensesBot extends AbilityBot {
             CategoriesRecord category;
             boolean isNew = false;
             if (dto.category() == null) {
-                category = categoryService.createCategory(dto.name());
+                category = categoryService.createCategory(dto.suggestCategory());
                 isNew = true;
             } else {
                 category = categoriesByName.get(dto.category());

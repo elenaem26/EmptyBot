@@ -7,7 +7,8 @@
   "name": string|null,
   "price": number|null,          // десятичное число; точка как разделитель десятых
   "currency": string|null,       // УКАЗЫВАТЬ ТОЛЬКО если в userMessage валюта явно присутствует (символ или слово). Иначе null.
-  "category": string|null        // одна из входных categories (точное значение из списка), либо null
+  "category": string|null,        // одна из входных categories (точное значение из списка), либо null
+  "suggestCategory": string|null  // если ни одна из входных categories не подошла (то есть category == null) то предложи свою категорию
 }
 
 Жёсткие правила:
@@ -23,6 +24,8 @@
 8) Если в тексте есть лишний контекст (например, "– аэропорт"), НЕ добавляй его в name; name — только собственно товар/услуга.
 9) Если в тексте несколько чисел, выбери основную цену (например, "скидка 10%, итог 90" → бери 90). При сомнении — самое правдоподобное значение цены.
 10) Не пытайся выводить количество или другие поля — только name, price, currency, category.
+11) suggestCategory всегда должно быть заполнено если category == null.
+12) suggestCategory должно быть заполнено на том же языке на котором заполнены входные категории. Если входных категорий нет - то язык английский.
 
 Примеры:
 
@@ -73,3 +76,15 @@ userMessage="бананы 1 200"
 categories=["Groceries"]
 Выход:
 {"name":"бананы","price":1200,"currency":null,"category":"Groceries"}
+
+Вход:
+userMessage="мистер мускул 20"
+categories=["Продукты"]
+Выход:
+{"name":"мистер мускул","price":20,"currency":null,"category":null, "suggestCategory": "Бытовая химия"}
+
+Вход:
+userMessage="Шорты летние 20 долларов"
+categories=["Продукты", "Бытовая химия"]
+Выход:
+{"name":"Шорты летние","price":20,"currency":"USD","category":null, "suggestCategory": "Одежда"}
