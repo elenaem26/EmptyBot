@@ -6,9 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.time.Instant;
 
+import static expenses.bot.NormalizationHelper.normalize;
 import static expenses.jooq.generated.Tables.CATEGORIES;
 
 @Service
@@ -18,22 +18,6 @@ public class CategoryService {
     @Autowired
     private DSLContext dsl;
 
-    public List<CategoriesRecord> createCategoriesIfNotExists(Set<String> categories) {
-        Map<String, CategoriesRecord> categoriesByName = dsl.selectFrom(CATEGORIES).forUpdate().fetch()
-                .collect(Collectors.toMap(CategoriesRecord::getName, c -> c));
-
-        List<CategoriesRecord> recordsToSave = new ArrayList<>();
-        for (String category : categories) {
-            if (!categoriesByName.containsKey(category)) {
-                CategoriesRecord newCategory = mapCategory(category);
-                recordsToSave.add(newCategory);
-                categoriesByName.put(newCategory.getName(), newCategory);
-            }
-        }
-        dsl.batchInsert(recordsToSave).execute();
-        return categoriesByName.values().stream().toList();
-    }
-
     public CategoriesRecord upsertCategory(Long userId, String name) {
         String normalizedName = normalize(name);
 
@@ -41,30 +25,19 @@ public class CategoryService {
                 .set(CATEGORIES.USER_ID, userId)
                 .set(CATEGORIES.NAME, normalizedName)
                 .onConflict(CATEGORIES.USER_ID, CATEGORIES.NAME)
-                .doNothing()
+                .doUpdate()
+                .set(CATEGORIES.UPDATED_AT, Instant.now())
                 .returning()
                 .fetchOne();
     }
 
-    private String normalize(String s) {
-        return s == null ? "" : s.trim().toLowerCase();
-    }
+    public String listCategoriesAsString(Long userId) {
+        var categories = dsl.select(CATEGORIES.NAME)
+                .from(CATEGORIES)
+                .where(CATEGORIES.USER_ID.eq(userId))
+                .orderBy(CATEGORIES.NAME.asc())
+                .fetchInto(String.class);
 
-    public CategoriesRecord createCategory(String name) {
-        CategoriesRecord newCategory = mapCategory(name);
-        newCategory.store();
-        return newCategory;
-    }
-
-    public CategoriesRecord mapCategory(String name) {
-        UUID id = UUID.randomUUID();
-        CategoriesRecord r = dsl.newRecord(CATEGORIES);
-        //r.setId(id);
-        r.setName(name);
-        return r;
-    }
-
-    public List<CategoriesRecord> find() {
-        return dsl.selectFrom(CATEGORIES).fetch();
+        return String.join(", ", categories);
     }
 }

@@ -19,3 +19,4 @@ public class ExpensesBotApplication {
 //--удалить экспенс?
 //        --default currency to show
 //команды - покажи все покупки, покажи категории и тд... - и также менеджерить покупки
+//redis lock? last transaction

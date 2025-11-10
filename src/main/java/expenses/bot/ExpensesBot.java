@@ -1,14 +1,8 @@
 package expenses.bot;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import expenses.configuration.BotConfiguration;
-import expenses.dto.ExpensesAndCategoriesRecord;
-import expenses.dto.OpenAiExpenseDto;
-import expenses.dto.OpenAiRequestDto;
 import expenses.dto.v2.ExpenseAction;
-import expenses.jooq.generated.tables.records.CategoriesRecord;
-import expenses.jooq.generated.tables.records.ExpensesRecord;
+import expenses.service.CategoryRuleService;
 import expenses.service.CategoryService;
 import expenses.service.ExpensesService;
 import org.slf4j.Logger;
@@ -26,9 +20,6 @@ import org.telegram.abilitybots.api.objects.Reply;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static expenses.bot.ExpenseFormatter.formatResponse;
 
@@ -36,6 +27,9 @@ import static expenses.bot.ExpenseFormatter.formatResponse;
 public class ExpensesBot extends AbilityBot {
 
     private final Logger logger = LoggerFactory.getLogger(ExpensesBot.class);
+
+    @Autowired
+    private CategoryRuleService categoryRuleService;
 
     @Autowired
     private CategoryService categoryService;
@@ -48,10 +42,6 @@ public class ExpensesBot extends AbilityBot {
 
     @Autowired
     private ChatClient chatClient;
-
-    private final ObjectMapper mapper = new ObjectMapper();
-    @Autowired
-    private ObjectMapper objectMapper;
 
     public ExpensesBot(@Value("${telegrambot.name}") String botName, @Value("${telegrambot.token}") String botToken) {
         super(botToken, botName);
@@ -68,20 +58,23 @@ public class ExpensesBot extends AbilityBot {
         Long chatId = update.getMessage().getChatId();
         Long userId = update.getMessage().getFrom().getId();
         if (text.isBlank()) {
-            silent.send("Строка пустая =(", chatId);;
+            silent.send("Строка пустая =(", chatId);
         }
 
-        ExpenseAction action = parseMessage(text);
-        if (action.action() == ExpenseAction.Action.CREATE_TRANSACTION) {
-            expensesService.insertExpense(userId, action.transaction());
+        String categories = categoryService.listCategoriesAsString(userId); //todo cache?
+        String rules = categoryRuleService.listRulesAsString(userId);
+
+        ExpenseAction action = sendToOpenAi(text, categories, rules);
+        switch (action.action()) {
+            case CREATE_TRANSACTION -> expensesService.insertExpense(userId, action.transaction());
+            case UPDATE_TRANSACTION -> expensesService.updateExpense(userId, action.update());
         }
 
         silent.send(formatResponse(action), chatId);
     }
 
 
-    private ExpenseAction parseMessage(String userText) {
-
+    private ExpenseAction sendToOpenAi(String userText, String categories, String rules) {
         var options = OpenAiChatOptions.builder()
                 .responseFormat(
                         new ResponseFormat(
@@ -92,10 +85,19 @@ public class ExpensesBot extends AbilityBot {
                 .build();
 
         return chatClient.prompt()
-                .user(userSpec -> userSpec.text(userText))
+                .user(userSpec -> userSpec.text(buildUserPrompt(userText, categories, rules)))
                 .options(options)
                 .call()
                 .entity(ExpenseAction.class);
+    }
+
+    public String buildUserPrompt(String userText, String categories, String rules) {
+        return "Сообщение пользователя: " +
+                userText +
+                "Категории пользователя: " +
+                categories +
+                "Правила пользователя: " +
+                rules;
     }
 
 //    private void reply(BaseAbilityBot bot, Update update) {
@@ -134,35 +136,6 @@ public class ExpensesBot extends AbilityBot {
 //        }
 //    }
 
-    private OpenAiExpenseDto readOpenAiExpensesResponseDto(String text) {
-        try {
-            return mapper.readValue(text, OpenAiExpenseDto.class);
-        } catch (Exception e) {
-            logger.error("Exception while parsing: ", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String writeOpenAiRequestDto(OpenAiRequestDto requestDto) {
-        try {
-            return mapper.writeValueAsString(requestDto);
-        } catch (Exception e) {
-            logger.error("Exception while parsing: ", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String format(ExpensesRecord saved, CategoriesRecord category, boolean isNew) {
-        StringBuilder sb = new StringBuilder();
-        if (isNew) {
-            sb.append("Новая категория: ");
-        } else {
-            sb.append("Старая категория: ");
-        }
-        sb.append(category.getName()).append("\n");
-        sb.append(String.format("%s %,.2f %s", saved.getName(), saved.getPrice(), saved.getCurrency()));
-        return sb.toString();
-    }
 
     @Override
     public List<Reply> replies() {

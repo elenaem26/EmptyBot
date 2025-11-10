@@ -1,10 +1,7 @@
 package expenses.service;
 
-import expenses.dto.ExpensesAndCategoriesRecord;
-import expenses.dto.OpenAiExpenseDto;
-import expenses.dto.OpenAiExpensesResponseDto;
 import expenses.dto.v2.Transaction;
-import expenses.jooq.generated.tables.records.CategoriesRecord;
+import expenses.dto.v2.Update;
 import expenses.jooq.generated.tables.records.ExpensesRecord;
 import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
+import static expenses.bot.NormalizationHelper.normalize;
 import static expenses.jooq.generated.Tables.EXPENSES;
 
 @Service
@@ -27,13 +24,19 @@ public class ExpensesService {
     @Autowired
     private CategoryService categoryService;
 
+    @Autowired
+    private CategoryRuleService categoryRuleService;
 
     public ExpensesRecord insertExpense(Long userId, Transaction tx) {
         if (tx == null || tx.title() == null) {
             throw new IllegalArgumentException("Transaction must have a title");
         }
 
-        var category = categoryService.upsertCategory(userId, tx.category());
+        String normalizedTitle = normalize(tx.title());
+        Optional<String> ruleCategory = categoryRuleService.findCategory(userId, normalizedTitle);
+        String finalCategory = ruleCategory.orElse(tx.category());
+
+        var category = categoryService.upsertCategory(userId, finalCategory);
         Long categoryId = category.getId();
 
         return dsl.insertInto(EXPENSES)
@@ -44,6 +47,49 @@ public class ExpensesService {
                 .set(EXPENSES.CATEGORY_ID, categoryId)
                 .returning()
                 .fetchOne();
+    }
+
+    public ExpensesRecord updateExpense(Long userId, Update update) {
+        if (update == null) {
+            throw new IllegalArgumentException("Update payload is null");
+        }
+
+        var lastExpense = dsl.selectFrom(EXPENSES)
+                .where(EXPENSES.USER_ID.eq(userId))
+                .orderBy(EXPENSES.CREATED_AT.desc())
+                .limit(1)
+                .fetchOne();
+
+        if (lastExpense == null) {
+            throw new IllegalStateException("Нет транзакций для обновления");
+        }
+
+        if (update.title() != null) {
+            lastExpense.setName(update.title().trim());
+        }
+
+        if (update.amount() != null) {
+            lastExpense.setPrice(BigDecimal.valueOf(update.amount()));
+        }
+
+        if (update.currency() != null) {
+            lastExpense.setCurrency(update.currency());
+        }
+
+        if (update.category() != null) {
+            String normalizedTitle = normalize(update.title() == null ? lastExpense.getName() : update.title());
+            Optional<String> ruleCategory = categoryRuleService.findCategory(userId, normalizedTitle);
+            String finalCategory = ruleCategory.orElse(update.category());
+
+            var category = categoryService.upsertCategory(userId, finalCategory);
+            lastExpense.setCategoryId(category.getId());
+        }
+
+        lastExpense.store();
+
+        categoryRuleService.upsertRule(userId, lastExpense, update);
+
+        return lastExpense;
     }
 
 //    public ExpensesAndCategoriesRecord createExpensesAndCategories(OpenAiExpensesResponseDto expensesDto) {
