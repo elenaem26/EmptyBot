@@ -13,3 +13,9 @@ public class ExpensesBotApplication {
     }
 
 }
+//--TODO add userId, id ввезде пусть будет bigserial? или uuid generated
+//--TODO изменять позапрошлую и тд покупку
+//--менеджерить категории
+//--удалить экспенс?
+//        --default currency to show
+//команды - покажи все покупки, покажи категории и тд... - и также менеджерить покупки

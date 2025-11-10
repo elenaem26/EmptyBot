@@ -34,6 +34,22 @@ public class CategoryService {
         return categoriesByName.values().stream().toList();
     }
 
+    public CategoriesRecord upsertCategory(Long userId, String name) {
+        String normalizedName = normalize(name);
+
+        return dsl.insertInto(CATEGORIES)
+                .set(CATEGORIES.USER_ID, userId)
+                .set(CATEGORIES.NAME, normalizedName)
+                .onConflict(CATEGORIES.USER_ID, CATEGORIES.NAME)
+                .doNothing()
+                .returning()
+                .fetchOne();
+    }
+
+    private String normalize(String s) {
+        return s == null ? "" : s.trim().toLowerCase();
+    }
+
     public CategoriesRecord createCategory(String name) {
         CategoriesRecord newCategory = mapCategory(name);
         newCategory.store();
@@ -43,7 +59,7 @@ public class CategoryService {
     public CategoriesRecord mapCategory(String name) {
         UUID id = UUID.randomUUID();
         CategoriesRecord r = dsl.newRecord(CATEGORIES);
-        r.setId(id);
+        //r.setId(id);
         r.setName(name);
         return r;
     }

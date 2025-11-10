@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "CREATE_TRANSACTION",
+        "UPDATE_TRANSACTION",
+        "CLARIFY",
+        "IGNORE"
+      ]
+    },
+    "transaction": {
+      "type": "object",
+      "properties": {
+        "title": { "type": ["string", "null"] },
+        "amount": { "type": ["number", "null"] },
+        "currency": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] }
+      },
+      "required": ["title", "amount", "currency", "category"],
+      "additionalProperties": false
+    },
+    "update": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": ["string", "null"],
+          "enum": ["LAST_TRANSACTION", "BY_TITLE"]
+        },
+        "title": { "type": ["string", "null"] },
+        "amount": { "type": ["number", "null"] },
+        "currency": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] }
+      },
+      "required": ["target", "title", "amount", "currency", "category"],
+      "additionalProperties": false
+    },
+    "reason": {
+      "type": ["string", "null"]
+    }
+  },
+  "required": ["action", "transaction", "update", "reason"],
+  "additionalProperties": false
+}
