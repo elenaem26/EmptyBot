@@ -27,5 +27,5 @@ spring:
     clean-disabled: true
 
 telegrambot:
-  name: ${TELEGRAM_BOT_NAME}
-  token: ${TELEGRAM_BOT_TOKEN}
+  name: ${botname}
+  token: ${bottoken}
